@@ -10,7 +10,8 @@ dotenv.config();
 export const verifyMidtransWebhook = (req, res, next) => {
   try {
     // Get the notification signature from the header
-    const signature = req.headers['x-midtrans-signature'] || req.headers['x-amz-sns-message-type'] || req.headers['x-signature-sha256'];
+    // According to Midtrans documentation, it should be 'x-midtrans-signature'
+    const signature = req.headers['x-midtrans-signature'];
     
     // Log the webhook for debugging
     console.log('Midtrans webhook received:', {
@@ -34,9 +35,11 @@ export const verifyMidtransWebhook = (req, res, next) => {
       return res.status(400).json({ error: 'Invalid payload' });
     }
     
+    // The correct Midtrans signature algorithm includes the server key in the hash
+    const notificationString = `${order_id}${status_code}${gross_amount}${serverKey}`;
     const expectedSignature = crypto
       .createHmac('sha512', serverKey)
-      .update(`${order_id}${status_code}${gross_amount}`)
+      .update(notificationString)
       .digest('hex');
     
     // Verify signature - make it case insensitive
