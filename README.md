@@ -1,5 +1,12 @@
 ## CLOUD NATIVE PLATFORM MONOREPO
 
+
+### INITIAL SETUP
+```shell
+  npm run start:container
+```
+
+
 ### CONNECT SSH CONFIG DOCKER CONTAINER OF DOKKU
 
 - GENERATE SSH BARE METAL SERVER
@@ -35,3 +42,9 @@ echo "ssh-rsa <Replace String Long Public Key SSH>" | dokku ssh-keys:add solusik
 
 CREATE RECORD 
 WILDCARD TYPE CNAME * VALUE <TunnelID>.cfargotunne.com PROXY true
+
+
+### FINAL TEST
+```shell
+  npm run deploy:test
+```
