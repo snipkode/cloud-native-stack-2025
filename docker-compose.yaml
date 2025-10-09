@@ -1,0 +1,41 @@
+version: '3.9'
+
+services:
+  dokku:
+    image: dokku/dokku:0.36.7
+    container_name: dokku
+    restart: unless-stopped
+    environment:
+      DOKKU_HOSTNAME: alamdev.local
+    ports:
+      - "3022:22"
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ~/.ssh/id_rsa.pub:/root/.ssh/authorized_keys:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      dokku_net:
+        ipv4_address: 172.28.0.10
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    depends_on:
+      - dokku
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      dokku_net:
+        ipv4_address: 172.28.0.11
+
+networks:
+  dokku_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
+
