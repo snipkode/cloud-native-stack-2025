@@ -3,6 +3,8 @@
     "version": "1.0.0",
     "private": true,
     "scripts": {
+        "start:container": "docker-compose -f docker-compose.yml up --build",
+        "stop:container": "docker-compose -f docker-compose.yml down",
         "deploy:api": "git subtree push --prefix api api main",
         "deploy:platform": "git subtree push --prefix platform platform main"
     }
