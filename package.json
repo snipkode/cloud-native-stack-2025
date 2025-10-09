@@ -1,0 +1,9 @@
+{
+    "name": "saas",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "deploy:api": "git subtree push --prefix api api main",
+        "deploy:platform": "git subtree push --prefix platform platform main"
+    }
+}
