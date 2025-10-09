@@ -40,6 +40,7 @@ echo "ssh-rsa <Replace String Long Public Key SSH>" | dokku ssh-keys:add solusik
 
 CREATE RECORD 
 WILDCARD TYPE CNAME * VALUE <TunnelID>.cfargotunne.com PROXY true
+TUNNEL * <rootdomain> http://<dokkuhostcontainerId>
 
 
 ### FINAL TEST
