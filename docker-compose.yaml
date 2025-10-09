@@ -6,7 +6,7 @@ services:
     container_name: dokku
     restart: unless-stopped
     environment:
-      DOKKU_HOSTNAME: alamdev.local
+      DOKKU_HOSTNAME: ${DOKKU_HOSTNAME}
     ports:
       - "3022:22"
       - "8080:80"
