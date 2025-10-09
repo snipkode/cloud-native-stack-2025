@@ -33,9 +33,7 @@ echo "ssh-rsa <Replace String Long Public Key SSH>" | dokku ssh-keys:add solusik
 
 ```shell
     docker create network <netname>
-    dokku network:set --global initial-network devjam &&
-    dokku network:set --global attach-post-create devjam &&
-    dokku network:set --global attach-post-deploy devjam &&
+    dokku network:set --global initial-network devjam && dokku network:set --global attach-post-create devjam && dokku network:set --global attach-post-deploy devjam
 ```
 
 - UPDATE TUNNEL CF
