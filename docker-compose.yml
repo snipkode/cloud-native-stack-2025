@@ -7,7 +7,6 @@ services:
     restart: unless-stopped
     environment:
       DOKKU_HOSTNAME: ${DOKKU_HOSTNAME}
-      DOKKU_GLOBAL_INITIAL_NETWORK: devjam
     ports:
       - "3022:22"
       - "8080:80"
