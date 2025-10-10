@@ -42,4 +42,4 @@ USER dokkuapi
 EXPOSE 3000
 
 # Start the application with migrations and seeders
-CMD ["sh", "-c", "npm run migrate && npm run seed && npm start"]
+CMD ["sh", "-c", "npm start"]
