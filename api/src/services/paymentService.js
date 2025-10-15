@@ -47,6 +47,8 @@ class PaymentService {
         description: `Top-up of ${amount} credits`,
       });
 
+      logger.info(`Updating transaction ${transaction.id} with Midtrans details: paymentGatewayId=${midtransResult.transactionId}, orderId=${midtransResult.orderId}`);
+      
       // Update our transaction record with Midtrans details
       await transaction.update({
         paymentGatewayId: midtransResult.transactionId,
@@ -60,6 +62,8 @@ class PaymentService {
           midtrans_expiry: midtransResult.expiryTime,
         }
       }, { transaction: dbTransaction });
+
+      logger.info(`Transaction ${transaction.id} updated successfully. New paymentGatewayId: ${transaction.paymentGatewayId}`);
 
       await dbTransaction.commit();
 
@@ -80,8 +84,25 @@ class PaymentService {
    * @returns {Object} - Processing result
    */
   async processWebhook(notification) {
+    logger.info(`Processing Midtrans webhook: ${JSON.stringify({
+      transaction_id: notification.transaction_id,
+      transaction_status: notification.transaction_status,
+      fraud_status: notification.fraud_status,
+      status_code: notification.status_code,
+      order_id: notification.order_id,
+      gross_amount: notification.gross_amount
+    })}`);
+
     // Process the notification using the Midtrans service
     const processed = await midtransService.processWebhook(notification);
+
+    logger.info(`Processed webhook result: ${JSON.stringify({ 
+      paymentGatewayId: processed.paymentGatewayId, 
+      status: processed.status,
+      orderId: processed.orderId
+    })}`);
+
+    logger.info(`Searching for transaction with paymentGatewayId: ${processed.paymentGatewayId}`);
 
     // Find the transaction in our database using the transaction_id from Midtrans
     let transaction = await Transaction.findOne({
@@ -89,6 +110,33 @@ class PaymentService {
         paymentGatewayId: processed.paymentGatewayId  // This is the transaction_id from Midtrans
       }
     });
+
+    if (!transaction) {
+      logger.warn(`Transaction not found with paymentGatewayId: ${processed.paymentGatewayId}, trying orderId: ${processed.orderId}`);
+
+      // If not found with transaction_id, also try to find with order_id (fallback approach)
+      transaction = await Transaction.findOne({
+        where: {
+          // Try looking up by order_id which might be stored as paymentGatewayId during creation
+          paymentGatewayId: processed.orderId
+        }
+      });
+
+      if (!transaction) {
+        logger.warn(`Transaction not found with orderId: ${processed.orderId}, trying midtransOrderId field`);
+        
+        // If still not found, try looking by metadata reference to Midtrans transaction
+        if (processed.rawNotification && processed.rawNotification.order_id) {
+          // Instead of searching in JSON metadata, use the separate midtransOrderId field 
+          // which should have been populated during transaction creation
+          transaction = await Transaction.findOne({
+            where: { 
+              midtransOrderId: processed.rawNotification.order_id 
+            }
+          });
+        }
+      }
+    }
 
     // If not found with transaction_id, also try to find with order_id (fallback approach)
     if (!transaction) {
@@ -122,12 +170,8 @@ class PaymentService {
         paymentGatewayId: processed.paymentGatewayId,
         status: 'ignored'
       };
-    }
-
-    // Only allow status updates to pending transactions
-    if (transaction.status !== 'pending') {
-      logger.warn(`Webhook attempt for already ${transaction.status} transaction: ${processed.paymentGatewayId}`);
-      return { message: 'Invalid transaction state', status: 'ignored' };
+    } else {
+      logger.info(`Found transaction ${transaction.id} for webhook, previous status: ${transaction.status}`);
     }
 
     const dbTransaction = await sequelize.transaction();
@@ -148,8 +192,12 @@ class PaymentService {
         }
       }, { transaction: dbTransaction });
 
+      logger.info(`Updated transaction status from ${previousStatus} to ${processed.status} for transaction ${transaction.id}`);
+
       // If payment is successful, update user's credits or plan (only if not already processed)
       if (processed.status === 'completed' && previousStatus !== 'completed') {
+        logger.info(`Processing completed transaction ${transaction.id} for user ${transaction.userId}, adding ${transaction.amount} credits`);
+        
         const user = await User.findByPk(transaction.userId, { 
           lock: dbTransaction.LOCK.UPDATE,
           transaction: dbTransaction,
@@ -158,6 +206,7 @@ class PaymentService {
 
         // Check if this transaction is for plan subscription (not just topup)
         if (transaction.description && transaction.description.includes('Plan subscription')) {
+          logger.info(`Processing plan subscription for user ${user.id}`);
           // This is a plan subscription payment
           // Update user's plan from pendingPlanId
           if (user.pendingPlanId) {
@@ -180,13 +229,19 @@ class PaymentService {
           }
         } else {
           // This is a regular topup transaction, add credits
+          logger.info(`Adding ${transaction.amount} credits to user ${user.id}, previous balance: ${user.credits}`);
           await user.update({
             credits: parseFloat(user.credits) + parseFloat(transaction.amount),
           }, { transaction: dbTransaction });
+          logger.info(`Updated user ${user.id} credits to: ${user.credits + parseFloat(transaction.amount)}`);
         }
+      } else {
+        logger.info(`Skipping credit update for transaction ${transaction.id} - processed.status: ${processed.status}, previousStatus: ${previousStatus}`);
       }
 
       await dbTransaction.commit();
+
+      logger.info(`Webhook processed successfully for transaction ${transaction.id}, final status: ${processed.status}`);
 
       return {
         message: 'Webhook processed successfully',
@@ -194,6 +249,7 @@ class PaymentService {
         status: processed.status,
       };
     } catch (error) {
+      logger.error(`Error processing webhook for transaction: ${error.message}`, error);
       await dbTransaction.rollback();
       throw error;
     }
