@@ -7,6 +7,7 @@ dotenv.config();
  * Middleware to verify Midtrans webhook signature
  * This middleware should be used after raw body has been processed
  * NOTE: Midtrans can send signature in both header and body depending on configuration
+ * Format: SHA-512(order_id + status_code + gross_amount + server_key)
  */
 export const verifyMidtransWebhook = (req, res, next) => {
   try {
@@ -38,9 +39,25 @@ export const verifyMidtransWebhook = (req, res, next) => {
       return res.status(500).json({ error: 'Server configuration error' });
     }
     
-    // Calculate expected signature using the raw body and server key
-    // Format: SHA-512(raw_body + server_key)
-    const notificationString = req.rawBody + serverKey;
+    // Parse the body to get the notification data
+    let parsedBody;
+    try {
+      parsedBody = JSON.parse(req.rawBody);
+    } catch (e) {
+      console.error('Failed to parse webhook body:', e.message);
+      return res.status(400).json({ error: 'Invalid JSON in webhook body' });
+    }
+    
+    // Calculate expected signature using specific fields from the notification
+    // Format: SHA-512(order_id + status_code + gross_amount + server_key)
+    const { order_id, status_code, gross_amount } = parsedBody;
+    
+    if (!order_id || !status_code || !gross_amount) {
+      console.error('Missing required fields for signature verification', { order_id, status_code, gross_amount });
+      return res.status(400).json({ error: 'Missing required fields for signature verification' });
+    }
+    
+    const notificationString = `${order_id}${status_code}${gross_amount}${serverKey}`;
     const expectedSignature = crypto
       .createHash('sha512')
       .update(notificationString)
@@ -55,7 +72,8 @@ export const verifyMidtransWebhook = (req, res, next) => {
         received: signature,
         expected: expectedSignature,
         normalizedReceived,
-        normalizedExpected
+        normalizedExpected,
+        notificationString, // Log the string used for signature calculation
       });
       return res.status(401).json({ error: 'Invalid signature' });
     }
