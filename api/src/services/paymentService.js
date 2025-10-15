@@ -102,9 +102,11 @@ class PaymentService {
 
     // If still not found, try looking by metadata reference to Midtrans transaction
     if (!transaction && processed.rawNotification && processed.rawNotification.order_id) {
+      // Instead of searching in JSON metadata, use the separate midtransOrderId field 
+      // which should have been populated during transaction creation
       transaction = await Transaction.findOne({
-        where: {
-          '$metadata.midtransOrderId$': processed.rawNotification.order_id
+        where: { 
+          midtransOrderId: processed.rawNotification.order_id 
         }
       });
     }
