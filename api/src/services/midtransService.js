@@ -119,7 +119,7 @@ class MidtransService {
   /**
    * Validate Midtrans notification signature
    * @param {Object} notification - Webhook notification payload
-   * @param {string} signatureKey - Signature key from Midtrans header
+   * @param {string} signatureKey - Signature key from Midtrans (header or body)
    * @returns {boolean} Whether signature is valid
    */
   validateWebhook(notification, signatureKey) {

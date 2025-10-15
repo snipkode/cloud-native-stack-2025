@@ -6,20 +6,23 @@ dotenv.config();
 /**
  * Middleware to verify Midtrans webhook signature
  * This middleware should be used after raw body has been processed
+ * NOTE: Midtrans can send signature in both header and body depending on configuration
  */
 export const verifyMidtransWebhook = (req, res, next) => {
   try {
-    // Get the notification signature from the header
-    // Midtrans uses 'x-midtrans-signature' header for webhook signature
+    // Get the notification signature - check both header and body
+    // Midtrans typically uses 'x-midtrans-signature' header but signature can also be in body
     const signature = req.headers['x-midtrans-signature'] || 
                      req.headers['x-signature-key'] || 
-                     req.headers['x-real-signature'];
+                     req.headers['x-real-signature'] ||
+                     req.body?.signature_key; // Also check if signature_key is in the body
     
     // Log the webhook for debugging
     console.log('Midtrans webhook received:', {
       path: req.path,
       headers: req.headers,
-      signature: signature
+      signature: signature,
+      bodySignature: req.body?.signature_key
     });
     
     // Check if we have raw body available
