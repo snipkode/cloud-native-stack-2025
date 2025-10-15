@@ -40,7 +40,19 @@ const logLevels = {
 };
 
 const formatLog = (level, message) => {
-  const timestamp = new Date().toISOString();
+  // Format timestamp to Asia/Jakarta timezone in YYYY-MM-DD H:i:s format
+  const now = new Date();
+  const jakartaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
+  
+  const year = jakartaTime.getFullYear();
+  const month = String(jakartaTime.getMonth() + 1).padStart(2, '0');
+  const day = String(jakartaTime.getDate()).padStart(2, '0');
+  const hours = String(jakartaTime.getHours()).padStart(2, '0');
+  const minutes = String(jakartaTime.getMinutes()).padStart(2, '0');
+  const seconds = String(jakartaTime.getSeconds()).padStart(2, '0');
+  
+  const timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  
   const { color, label } = logLevels[level];
   return `${colors.bright}${colors.fg.white}[${timestamp}]${colors.reset} ${color}[${label}]${colors.reset} ${message}`;
 };
