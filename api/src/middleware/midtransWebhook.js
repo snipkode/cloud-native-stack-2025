@@ -10,8 +10,10 @@ dotenv.config();
 export const verifyMidtransWebhook = (req, res, next) => {
   try {
     // Get the notification signature from the header
-    // According to Midtrans documentation, it should be 'x-midtrans-signature'
-    const signature = req.headers['x-midtrans-signature'];
+    // Midtrans uses 'x-midtrans-signature' header for webhook signature
+    const signature = req.headers['x-midtrans-signature'] || 
+                     req.headers['x-signature-key'] || 
+                     req.headers['x-real-signature'];
     
     // Log the webhook for debugging
     console.log('Midtrans webhook received:', {
@@ -20,25 +22,24 @@ export const verifyMidtransWebhook = (req, res, next) => {
       signature: signature
     });
     
-    // Verify the signature using Midtrans algorithm
-    // The signature is calculated as SHA-512 of: order_id+status_code+gross_amount+server_key
-    const { order_id, status_code, gross_amount } = req.body;
-    const serverKey = process.env.MIDTRANS_SERVER_KEY;
+    // Check if we have raw body available
+    if (!req.rawBody) {
+      console.error('Raw body not available for signature verification');
+      return res.status(400).json({ error: 'Raw body not available for signature verification' });
+    }
     
+    // Get the server key
+    const serverKey = process.env.MIDTRANS_SERVER_KEY;
     if (!serverKey) {
       console.error('MIDTRANS_SERVER_KEY not configured');
       return res.status(500).json({ error: 'Server configuration error' });
     }
     
-    if (!order_id || !status_code || !gross_amount) {
-      console.error('Missing required fields in webhook payload');
-      return res.status(400).json({ error: 'Invalid payload' });
-    }
-    
-    // The correct Midtrans signature algorithm includes the server key in the hash
-    const notificationString = `${order_id}${status_code}${gross_amount}${serverKey}`;
+    // Calculate expected signature using the raw body and server key
+    // Format: SHA-512(raw_body + server_key)
+    const notificationString = req.rawBody + serverKey;
     const expectedSignature = crypto
-      .createHmac('sha512', serverKey)
+      .createHash('sha512')
       .update(notificationString)
       .digest('hex');
     

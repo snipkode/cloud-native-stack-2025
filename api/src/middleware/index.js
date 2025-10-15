@@ -51,11 +51,12 @@ export const setupMiddleware = (app, config) => {
   app.use(globalRateLimit);
   app.use(cors());
 
-  // For the webhook endpoint, we need to capture raw body first
-  const webhookRawHandler = express.raw({ type: 'application/json' });
+  // For the webhook endpoint, we need to capture raw body first and preserve it
+  const webhookRawHandler = express.raw({ type: 'application/json', limit: '10mb' });
   const webhookHandler = (req, res, next) => {
-    // Parse raw body for signature verification
+    // Store the raw body before parsing, so it's available for signature verification
     if (typeof req.body === 'string' || Buffer.isBuffer(req.body)) {
+      req.rawBody = req.body.toString();
       try {
         req.body = JSON.parse(req.body.toString());
       } catch (e) {
