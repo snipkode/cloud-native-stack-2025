@@ -10,8 +10,9 @@ import { AdminUsersPanel } from './AdminUsersPanel';
 import { AdminDeploymentsPanel } from './AdminDeploymentsPanel';
 import { AdminTransactionsPanel } from './AdminTransactionsPanel';
 import { AdminRolesPanel } from './AdminRolesPanel';
+import { AdminCreditPanel } from './AdminCreditPanel';
 
-type AdminView = 'users' | 'deployments' | 'transactions' | 'roles';
+type AdminView = 'users' | 'deployments' | 'transactions' | 'roles' | 'credits';
 
 export function AdminTab() {
   const [activeView, setActiveView] = useState<AdminView>('users');
@@ -32,6 +33,7 @@ export function AdminTab() {
     try {
       switch (activeView) {
         case 'users':
+        case 'credits':
           const usersData = await apiService.getAllUsers();
           setUsers(usersData.users);
           break;
@@ -64,6 +66,7 @@ export function AdminTab() {
     { id: 'deployments', label: getTranslation('deploymentsTab', language), icon: Server },
     { id: 'transactions', label: getTranslation('transactionsTab', language), icon: DollarSign },
     { id: 'roles', label: getTranslation('rolesTab', language), icon: Shield },
+    { id: 'credits', label: 'Credit Management', icon: DollarSign },
   ] as const;
 
   return (
@@ -149,7 +152,7 @@ export function AdminTab() {
             <div className="flex items-center justify-center h-64">
               <div className="flex flex-col items-center">
                 <Loader className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-spin mb-3" />
-                <p className="text-slate-600 dark:text-slate-400">{getTranslation('loading', language)} {getTranslation(activeView === 'users' ? 'usersTab' : activeView === 'deployments' ? 'deploymentsTab' : activeView === 'roles' ? 'rolesTab' : 'transactionsTab', language)}...</p>
+                <p className="text-slate-600 dark:text-slate-400">{getTranslation('loading', language)} {(activeView === 'users' ? 'usersTab' : activeView === 'deployments' ? 'deploymentsTab' : activeView === 'roles' ? 'rolesTab' : activeView === 'credits' ? 'Credit Management' : 'transactionsTab')}...</p>
               </div>
             </div>
           ) : (
@@ -163,6 +166,9 @@ export function AdminTab() {
               )}
               {activeView === 'roles' && (
                 <AdminRolesPanel users={users} onUpdate={loadData} />
+              )}
+              {activeView === 'credits' && (
+                <AdminCreditPanel users={users} onUpdate={loadData} />
               )}
             </>
           )}

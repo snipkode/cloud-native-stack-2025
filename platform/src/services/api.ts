@@ -12,6 +12,7 @@ import {
   Plan,
   UsageData,
 } from '../types/api';
+import { CreditAdjustmentRequest, CreditResetRequest, CreditHistoryResponse } from '../types/adminCredit';
 
 const API_BASE_URL = (import.meta.env.VITE_BASE_URL || 'https://api-v2.obskt.xyz') + '/api';
 
@@ -30,6 +31,27 @@ class ApiService {
   clearToken() {
     this.token = null;
     localStorage.removeItem('authToken');
+  }
+
+  // Admin Credit Management methods
+  async updateUserCredit(userId: string, data: CreditAdjustmentRequest): Promise<{ message: string; user: User; operation: any }> {
+    return this.request(`/admin/credits/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async resetUserCredit(userId: string, data: CreditResetRequest): Promise<{ message: string; user: User; operation: any }> {
+    return this.request(`/admin/credits/${userId}/reset`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getUserCreditHistory(userId: string): Promise<CreditHistoryResponse> {
+    return this.request(`/admin/credits/${userId}/history`);
   }
 
   public async request<T>(
