@@ -1,0 +1,14 @@
+node_modules
+test
+tests
+*.test.ts
+*.spec.ts
+*.map
+.example
+.git
+.github
+.nyc_output
+coverage
+.nyc_output
+.vscode
+docs

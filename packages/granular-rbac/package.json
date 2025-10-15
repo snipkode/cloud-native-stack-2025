@@ -1,0 +1,55 @@
+{
+  "name": "granular-rbac",
+  "version": "1.0.0",
+  "description": "A granular Role-Based Access Control system for Node.js applications",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "granular-rbac": "./bin/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "rbac",
+    "authorization",
+    "access-control",
+    "permissions",
+    "security",
+    "role-based",
+    "granular"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/granular-rbac.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/granular-rbac/issues"
+  },
+  "homepage": "https://github.com/your-username/granular-rbac#readme",
+  "dependencies": {
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/lodash": "^4.14.194",
+    "@types/node": "^18.15.11",
+    "@typescript-eslint/eslint-plugin": "^5.57.1",
+    "@typescript-eslint/parser": "^5.57.1",
+    "eslint": "^8.38.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.4"
+  },
+  "files": [
+    "dist/**/*",
+    "bin/**/*",
+    "README.md",
+    "package.json"
+  ]
+}
