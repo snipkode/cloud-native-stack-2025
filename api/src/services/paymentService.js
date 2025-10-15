@@ -133,6 +133,9 @@ class PaymentService {
     const dbTransaction = await sequelize.transaction();
 
     try {
+      // Save the current status before updating
+      const previousStatus = transaction.status;
+      
       // Update transaction with new status
       await transaction.update({
         status: processed.status,
@@ -146,7 +149,7 @@ class PaymentService {
       }, { transaction: dbTransaction });
 
       // If payment is successful, update user's credits or plan (only if not already processed)
-      if (processed.status === 'completed' && transaction.status !== 'completed') {
+      if (processed.status === 'completed' && previousStatus !== 'completed') {
         const user = await User.findByPk(transaction.userId, { 
           lock: dbTransaction.LOCK.UPDATE,
           transaction: dbTransaction,
