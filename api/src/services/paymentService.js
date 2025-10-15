@@ -110,10 +110,8 @@ class PaymentService {
     }
 
     if (!transaction) {
-      console.warn(`Webhook received for unknown transaction, paymentGatewayId: ${processed.paymentGatewayId}`, {
-        orderId: processed.orderId,
-        rawNotification: processed.rawNotification
-      });
+      logger.warn(`Webhook received for unknown transaction, paymentGatewayId: ${processed.paymentGatewayId}`);
+      logger.debug(`Order ID: ${processed.orderId}, Raw notification: ${JSON.stringify(processed.rawNotification)}`);
       
       // Return success to acknowledge the webhook but indicate transaction was not found
       // This prevents Midtrans from retrying indefinitely while logging the issue
@@ -126,7 +124,7 @@ class PaymentService {
 
     // Only allow status updates to pending transactions
     if (transaction.status !== 'pending') {
-      console.warn(`Webhook attempt for already ${transaction.status} transaction: ${processed.paymentGatewayId}`);
+      logger.warn(`Webhook attempt for already ${transaction.status} transaction: ${processed.paymentGatewayId}`);
       return { message: 'Invalid transaction state', status: 'ignored' };
     }
 
