@@ -83,15 +83,45 @@ class PaymentService {
     // Process the notification using the Midtrans service
     const processed = await midtransService.processWebhook(notification);
 
-    // Find the transaction in our database
-    const transaction = await Transaction.findOne({
+    // Find the transaction in our database using the transaction_id from Midtrans
+    let transaction = await Transaction.findOne({
       where: { 
-        paymentGatewayId: processed.paymentGatewayId
+        paymentGatewayId: processed.paymentGatewayId  // This is the transaction_id from Midtrans
       }
     });
 
+    // If not found with transaction_id, also try to find with order_id (fallback approach)
     if (!transaction) {
-      throw new Error(`Transaction not found for payment ID: ${processed.paymentGatewayId}`);
+      transaction = await Transaction.findOne({
+        where: {
+          // Try looking up by order_id which might be stored as paymentGatewayId during creation
+          paymentGatewayId: processed.orderId
+        }
+      });
+    }
+
+    // If still not found, try looking by metadata reference to Midtrans transaction
+    if (!transaction && processed.rawNotification && processed.rawNotification.order_id) {
+      transaction = await Transaction.findOne({
+        where: {
+          '$metadata.midtransOrderId$': processed.rawNotification.order_id
+        }
+      });
+    }
+
+    if (!transaction) {
+      console.warn(`Webhook received for unknown transaction, paymentGatewayId: ${processed.paymentGatewayId}`, {
+        orderId: processed.orderId,
+        rawNotification: processed.rawNotification
+      });
+      
+      // Return success to acknowledge the webhook but indicate transaction was not found
+      // This prevents Midtrans from retrying indefinitely while logging the issue
+      return { 
+        message: 'Webhook received but transaction not found', 
+        paymentGatewayId: processed.paymentGatewayId,
+        status: 'ignored'
+      };
     }
 
     // Only allow status updates to pending transactions
