@@ -163,12 +163,36 @@ export const logger = {
   },
   
   dbConnected: () => {
-    const timestamp = new Date().toISOString();
+    // Format timestamp to Asia/Jakarta timezone in YYYY-MM-DD H:i:s format
+    const now = new Date();
+    const jakartaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
+    
+    const year = jakartaTime.getFullYear();
+    const month = String(jakartaTime.getMonth() + 1).padStart(2, '0');
+    const day = String(jakartaTime.getDate()).padStart(2, '0');
+    const hours = String(jakartaTime.getHours()).padStart(2, '0');
+    const minutes = String(jakartaTime.getMinutes()).padStart(2, '0');
+    const seconds = String(jakartaTime.getSeconds()).padStart(2, '0');
+    
+    const timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    
     console.log(`${colors.bright}${colors.fg.white}[${timestamp}]${colors.reset} ${colors.fg.cyan}⚡ DATABASE${colors.reset} ${colors.fg.green}CONNECTION ESTABLISHED${colors.reset}`);
   },
   
   dbSynced: () => {
-    const timestamp = new Date().toISOString();
+    // Format timestamp to Asia/Jakarta timezone in YYYY-MM-DD H:i:s format
+    const now = new Date();
+    const jakartaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
+    
+    const year = jakartaTime.getFullYear();
+    const month = String(jakartaTime.getMonth() + 1).padStart(2, '0');
+    const day = String(jakartaTime.getDate()).padStart(2, '0');
+    const hours = String(jakartaTime.getHours()).padStart(2, '0');
+    const minutes = String(jakartaTime.getMinutes()).padStart(2, '0');
+    const seconds = String(jakartaTime.getSeconds()).padStart(2, '0');
+    
+    const timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    
     console.log(`${colors.bright}${colors.fg.white}[${timestamp}]${colors.reset} ${colors.fg.cyan}🔄 DATABASE${colors.reset} ${colors.fg.green}SYNCHRONIZED${colors.reset}`);
   }
 };
