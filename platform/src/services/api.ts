@@ -271,7 +271,7 @@ class ApiService {
   ): Promise<{ message: string }> {
     return this.request<{ message: string }>(`/rbac/roles/${roleId}/permissions`, {
       method: 'POST',
-      body: JSON.stringify({ permissionIds }),
+      body: JSON.stringify({ roleId, permissionIds }),
     });
   }
 

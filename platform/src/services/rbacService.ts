@@ -71,7 +71,7 @@ export class RBACService {
     // Using direct request since apiService doesn't have this specific method
     return apiService.request<{ message: string }>(`/rbac/users/${userId}/roles`, {
       method: 'POST',
-      body: JSON.stringify({ roleId, expiresAt }),
+      body: JSON.stringify({ userId, roleId, expiresAt }),
     });
   }
 
