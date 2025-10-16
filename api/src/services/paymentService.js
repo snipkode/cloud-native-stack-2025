@@ -33,7 +33,7 @@ class PaymentService {
         amount,
         status: 'pending',
         paymentMethod: 'midtrans',
-        paymentGatewayId: `INV-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+        paymentGatewayId: '',
         description: `Top-up of ${amount} credits`,
       }, { transaction: dbTransaction });
 
@@ -43,7 +43,7 @@ class PaymentService {
         amount,
         email,
         firstName,
-        transactionId: transaction.id,
+        orderId: transaction.id,
         description: `Top-up of ${amount} credits`,
       });
 
@@ -109,11 +109,9 @@ class PaymentService {
 
     // UPDATE: Now search using orderId (which we control and is consistent)
     // After our refactor, paymentGatewayId now contains the order_id (TOPUP-xxx)
-    const cleanOrderId = processed.orderId.split('TOPUP-')[1]; // Extract the unique part after 'TOPUP-'
-    logger.info(`Looking up transaction with order_id: ${cleanOrderId}`);
     const transaction = await Transaction.findOne({
       where: { 
-        id: cleanOrderId
+        paymentGatewayId: processed.paymentGatewayId
       }
     });
 
