@@ -30,7 +30,7 @@ class MidtransService {
    */
   async createPayment(params) {
     try {
-      const { userId, amount, email, firstName, transactionId, description = 'Top-up Credits' } = params;
+      const { userId, amount, email, firstName, orderId, description = 'Top-up Credits' } = params;
 
       // Format amount to IDR (Indonesian Rupiah)
       const formattedAmount = parseFloat(amount).toFixed(0);
@@ -51,7 +51,7 @@ class MidtransService {
 
       const parameter = {
         transaction_details: {
-          order_id: `TOPUP-${transactionId}`,
+          order_id: `TOPUP-${orderId}`,
           gross_amount: formattedAmount
         },
         item_details: [
@@ -72,6 +72,10 @@ class MidtransService {
       const transaction = await this.snap.createTransaction(parameter);
       return {
         transactionId: transaction.transaction_id,
+        userId,
+        email,
+        firstName,
+        description,
         orderId: transaction.order_id,
         paymentUrl: transaction.redirect_url,
         token: transaction.token,

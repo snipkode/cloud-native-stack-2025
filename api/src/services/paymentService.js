@@ -109,9 +109,11 @@ class PaymentService {
 
     // UPDATE: Now search using orderId (which we control and is consistent)
     // After our refactor, paymentGatewayId now contains the order_id (TOPUP-xxx)
+    const cleanOrderId = processed.orderId.split('TOPUP-')[1]; // Extract the unique part after 'TOPUP-'
+    logger.info(`Looking up transaction with order_id: ${cleanOrderId}`);
     const transaction = await Transaction.findOne({
       where: { 
-        paymentGatewayId: processed.orderId  // Use order_id which we set in processTopup
+        id: cleanOrderId
       }
     });
 
@@ -164,7 +166,7 @@ class PaymentService {
 
       // If payment is successful, update user's credits or plan (only if not already processed)
       if (processed.status === 'completed' && previousStatus !== 'completed') {
-        logger.info(`Processing completed transaction ${transaction.id} for user ${transaction.userId}, adding ${transaction.amount} credits`);
+        logger.info(`Processing completed transaction ${transaction.midtransTransactionId} for user ${transaction.userId}, adding ${transaction.amount} credits`);
         
         const user = await User.findByPk(transaction.userId, { 
           lock: dbTransaction.LOCK.UPDATE,
@@ -204,16 +206,16 @@ class PaymentService {
           logger.info(`Updated user ${user.id} credits to: ${user.credits + parseFloat(transaction.amount)}`);
         }
       } else {
-        logger.info(`Skipping credit update for transaction ${transaction.id} - processed.status: ${processed.status}, previousStatus: ${previousStatus}`);
+        logger.info(`Skipping credit update for transaction ${transaction.midtransTransactionId} - processed.status: ${processed.status}, previousStatus: ${previousStatus}`);
       }
 
       await dbTransaction.commit();
 
-      logger.info(`Webhook processed successfully for transaction ${transaction.id}, final status: ${processed.status}`);
+      logger.info(`Webhook processed successfully for transaction ${transaction.midtransTransactionId}, final status: ${processed.status}`);
 
       return {
         message: 'Webhook processed successfully',
-        transactionId: transaction.id,
+        transactionId: transaction.midtransTransactionId,
         status: processed.status,
       };
     } catch (error) {
@@ -230,15 +232,15 @@ class PaymentService {
    */
   async syncTransactionStatus(transactionId) {
     const transaction = await Transaction.findOne({
-      where: { id: transactionId }
+      where: { midtransTransactionId: transactionId }
     });
 
-    if (!transaction || !transaction.paymentGatewayId) {
-      throw new Error('Transaction not found or has no payment gateway ID');
+    if (!transaction) {
+      throw new Error('Transaction not found');
     }
 
     // Get status from Midtrans
-    const midtransStatus = await midtransService.getTransactionStatus(transaction.paymentGatewayId);
+    const midtransStatus = await midtransService.getTransactionStatus(transaction.midtransTransactionId);
 
     const dbTransaction = await sequelize.transaction();
 
