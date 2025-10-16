@@ -49,21 +49,24 @@ class PaymentService {
 
       logger.info(`Updating transaction ${transaction.id} with Midtrans details: paymentGatewayId=${midtransResult.transactionId}, orderId=${midtransResult.orderId}`);
       
-      // Update our transaction record with Midtrans details
+      // UPDATE: Use orderId (TOPUP-xxx) as paymentGatewayId for reliable webhook matching
+      // This ensures consistency because order_id is controlled by us and matches between create and webhook
       await transaction.update({
-        paymentGatewayId: midtransResult.transactionId,
-        // Only update midtrans-specific fields if they exist in the model
-        ...(Transaction.rawAttributes.midtransTransactionId && { midtransTransactionId: midtransResult.transactionId }),
-        ...(Transaction.rawAttributes.midtransOrderId && { midtransOrderId: midtransResult.orderId }),
+        paymentGatewayId: midtransResult.orderId, // Use order_id for webhook matching (we control this)
+        // Store the Midtrans transactionId and orderId in separate fields
+        midtransTransactionId: midtransResult.transactionId,
+        midtransOrderId: midtransResult.orderId,
+        paymentType: midtransResult.paymentType,
         metadata: {
           ...transaction.metadata,
+          midtrans_transaction_id: midtransResult.transactionId, // Store original transaction_id for reference
           midtrans_payment_url: midtransResult.paymentUrl,
           midtrans_token: midtransResult.token,
           midtrans_expiry: midtransResult.expiryTime,
         }
       }, { transaction: dbTransaction });
 
-      logger.info(`Transaction ${transaction.id} updated successfully. New paymentGatewayId: ${transaction.paymentGatewayId}`);
+      logger.info(`Transaction ${transaction.id} updated. paymentGatewayId (order_id): ${transaction.paymentGatewayId}, midtransTransactionId: ${transaction.midtransTransactionId}`);
 
       await dbTransaction.commit();
 
@@ -104,59 +107,24 @@ class PaymentService {
 
     logger.info(`Searching for transaction with paymentGatewayId: ${processed.paymentGatewayId}`);
 
-    // Find the transaction in our database using the transaction_id from Midtrans
-    let transaction = await Transaction.findOne({
+    // UPDATE: Now search using orderId (which we control and is consistent)
+    // After our refactor, paymentGatewayId now contains the order_id (TOPUP-xxx)
+    const transaction = await Transaction.findOne({
       where: { 
-        paymentGatewayId: processed.paymentGatewayId  // This is the transaction_id from Midtrans
+        paymentGatewayId: processed.orderId  // Use order_id which we set in processTopup
       }
     });
 
     if (!transaction) {
-      logger.warn(`Transaction not found with paymentGatewayId: ${processed.paymentGatewayId}, trying orderId: ${processed.orderId}`);
-
-      // If not found with transaction_id, also try to find with order_id (fallback approach)
-      transaction = await Transaction.findOne({
-        where: {
-          // Try looking up by order_id which might be stored as paymentGatewayId during creation
-          paymentGatewayId: processed.orderId
-        }
-      });
-
-      if (!transaction) {
-        logger.warn(`Transaction not found with orderId: ${processed.orderId}, trying midtransOrderId field`);
-        
-        // If still not found, try looking by metadata reference to Midtrans transaction
-        if (processed.rawNotification && processed.rawNotification.order_id) {
-          // Instead of searching in JSON metadata, use the separate midtransOrderId field 
-          // which should have been populated during transaction creation
-          transaction = await Transaction.findOne({
-            where: { 
-              midtransOrderId: processed.rawNotification.order_id 
-            }
-          });
-        }
-      }
-    }
-
-    // If not found with transaction_id, also try to find with order_id (fallback approach)
-    if (!transaction) {
-      transaction = await Transaction.findOne({
-        where: {
-          // Try looking up by order_id which might be stored as paymentGatewayId during creation
-          paymentGatewayId: processed.orderId
-        }
-      });
-    }
-
-    // If still not found, try looking by metadata reference to Midtrans transaction
-    if (!transaction && processed.rawNotification && processed.rawNotification.order_id) {
-      // Instead of searching in JSON metadata, use the separate midtransOrderId field 
-      // which should have been populated during transaction creation
-      transaction = await Transaction.findOne({
-        where: { 
-          midtransOrderId: processed.rawNotification.order_id 
-        }
-      });
+      logger.warn(`Webhook: Transaction not found for order_id: ${processed.orderId}`);
+      logger.warn(`Expected: paymentGatewayId in database = order_id from Midtrans = ${processed.orderId}`);
+      
+      // Return success to acknowledge the webhook but indicate transaction was not found
+      return { 
+        message: 'Webhook received but transaction not found', 
+        paymentGatewayId: processed.paymentGatewayId,
+        status: 'ignored'
+      };
     }
 
     if (!transaction) {
