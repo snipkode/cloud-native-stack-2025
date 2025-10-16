@@ -109,9 +109,10 @@ class PaymentService {
 
     // UPDATE: Now search using orderId (which we control and is consistent)
     // After our refactor, paymentGatewayId now contains the order_id (TOPUP-xxx)
+    const cleanOrderId = processed.orderId.split('TOPUP-')[1];
     const transaction = await Transaction.findOne({
       where: { 
-        paymentGatewayId: processed.paymentGatewayId
+        id: cleanOrderId
       }
     });
 
